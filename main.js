@@ -38,6 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add keyboard listeners for rotation and flipping
         document.addEventListener('keydown', handleKeyPress);
+        
+        // Add click listener to the board to REMOVE pieces
+        gameBoard.addEventListener('click', handleBoardClick);
+        // --- NEW: Add dragstart listener to the board to MOVE pieces ---
+        gameBoard.addEventListener('dragstart', handleBoardDragStart);
     }
 
     /**
@@ -80,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         createBoard(puzzle);
         renderPieces(puzzle.piecesLeft);
+        
+        // Ensure win modal is hidden when a new puzzle loads
+        winModal.style.display = 'none';
     }
 
     /**
@@ -108,7 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const pieceInfo of puzzle.startPieces) {
             const pieceData = PIECES[pieceInfo.id];
             const shape = pieceData.allShapes[pieceInfo.shapeIndex % pieceData.allShapes.length];
-            paintPiece(shape, pieceData.color, pieceInfo.row, pieceInfo.col);
+            // Pass 'null' for pieceId to mark it as a non-removable start piece
+            paintPiece(shape, pieceData.color, pieceInfo.row, pieceInfo.col, null, null, true);
         }
     }
 
@@ -135,8 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} color - The CSS color class
      * @param {number} startRow - The top-left row to start painting
      * @param {number} startCol - The top-left col to start painting
+     * @param {string | null} pieceId - The ID of the piece, or null if it's a start piece
+     * @param {number | null} shapeIndex - The shape index, or null if it's a start piece
+     * @param {boolean} isStartPiece - Flag to mark as non-removable
      */
-    function paintPiece(shape, color, startRow, startCol) {
+    function paintPiece(shape, color, startRow, startCol, pieceId = null, shapeIndex = null, isStartPiece = false) {
+        // Create a unique ID for this specific placement instance
+        const instanceId = isStartPiece ? null : crypto.randomUUID(); 
+
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[0].length; c++) {
                 if (shape[r][c] === 1) {
@@ -148,6 +163,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cellToColor) {
                         // 'filled' class is crucial for collision detection
                         cellToColor.classList.add(color, 'filled');
+                        
+                        if (isStartPiece) {
+                            cellToColor.classList.add('start-piece');
+                        } else {
+                            // Add data so we can remove it later
+                            cellToColor.dataset.instanceId = instanceId;
+                            cellToColor.dataset.pieceId = pieceId;
+                            // --- NEW: Store shapeIndex and make draggable ---
+                            cellToColor.dataset.shapeIndex = shapeIndex;
+                            cellToColor.draggable = true;
+                        }
                     }
                 }
             }
@@ -198,6 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         pieceEl.addEventListener('dragstart', handleDragStart);
         pieceEl.addEventListener('dragend', handleDragEnd);
+        
+        // --- NEW: Add click listeners for rotation/flip in tray ---
+        pieceEl.addEventListener('click', rotatePieceInTray);
+        pieceEl.addEventListener('contextmenu', flipPieceInTray); // contextmenu = right-click
+
         return pieceEl;
     }
 
@@ -250,7 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleDragEnd(e) {
-        e.target.classList.remove('dragging');
+        // --- UPDATED: Make sure to remove 'dragging' class from the piece ---
+        if (currentlyDraggedPiece) {
+            currentlyDraggedPiece.classList.remove('dragging');
+        }
         currentlyDraggedPiece = null; // Clear reference
     }
 
@@ -278,7 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Collision Detection ---
             if (isValidMove(shape, startRow, startCol)) {
                 // All checks passed, place the piece!
-                paintPiece(shape, piece.color, startRow, startCol);
+                // --- UPDATED: Pass pieceId and shapeIndex to paintPiece ---
+                paintPiece(shape, piece.color, startRow, startCol, piece.id, shapeIndex, false);
                 
                 // Remove the piece from the tray
                 pieceEl.remove();
@@ -341,9 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentShapeIndex = (currentShapeIndex + 1) % maxShapes;
         } else if (e.key === 'f' || e.key === 'F') {
             // Flip: jump to the flipped half (or back)
-            // This assumes the first 4 are rotations, next 4 are flips
-            // A simpler flip is just to mirror, but this uses our 8 shapes
-            if (maxShapes > 4) { // 'O' and 'X' don't have 8 shapes
+            if (maxShapes > 4) { // Assumes 8 shapes (4 rotations, 4 flips)
                  currentShapeIndex = (currentShapeIndex + (maxShapes / 2)) % maxShapes;
             }
         }
@@ -362,6 +395,157 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- NEW: Functions for in-tray rotation/flip and board removal ---
+
+    /**
+     * Rotates a piece when it's clicked IN THE TRAY
+     */
+    function rotatePieceInTray(e) {
+        const pieceEl = e.currentTarget;
+        if (pieceEl.classList.contains('dragging')) return; // Don't rotate while dragging
+        
+        const pieceId = pieceEl.dataset.pieceId;
+        const piece = PIECES[pieceId];
+        let currentShapeIndex = parseInt(pieceEl.dataset.shapeIndex);
+        
+        currentShapeIndex = (currentShapeIndex + 1) % piece.allShapes.length;
+        
+        pieceEl.dataset.shapeIndex = currentShapeIndex;
+        updatePieceElement(pieceEl);
+    }
+
+Signature: `flipPieceInTray(e)`
+    /**
+     * Flips a piece when it's right-clicked IN THE TRAY
+     */
+    function flipPieceInTray(e) {
+        e.preventDefault(); // Stop right-click menu
+        const pieceEl = e.currentTarget;
+        if (pieceEl.classList.contains('dragging')) return;
+
+        const pieceId = pieceEl.dataset.pieceId;
+        const piece = PIECES[pieceId];
+        let currentShapeIndex = parseInt(pieceEl.dataset.shapeIndex);
+        const maxShapes = piece.allShapes.length;
+
+        if (maxShapes > 4) { // Assumes 8 shapes (4 rotations, 4 flips)
+            currentShapeIndex = (currentShapeIndex + (maxShapes / 2)) % maxShapes;
+        }
+        // If it has 4 or fewer shapes, it will just flip to an identical-looking rotation
+        
+        pieceEl.dataset.shapeIndex = currentShapeIndex;
+        updatePieceElement(pieceEl);
+    }
+
+    /**
+     * Removes a user-placed piece from the board when clicked
+     */
+    function handleBoardClick(e) {
+        const clickedCell = e.target.closest('.board-cell');
+        
+        // Only act if we click a filled cell that is NOT blocked and NOT a start piece
+        if (!clickedCell || !clickedCell.classList.contains('filled') || 
+            clickedCell.classList.contains('blocked') || 
+            clickedCell.classList.contains('start-piece') ||
+            !clickedCell.dataset.instanceId) { // Check for instanceId
+            return; 
+        }
+
+        const instanceId = clickedCell.dataset.instanceId;
+        const { pieceId } = removePieceFromBoard(instanceId);
+
+        if (pieceId) {
+            // Add the piece back to the tray with default rotation (index 0)
+            addPieceToTray(pieceId, 0); 
+            // If the win modal was showing, hide it
+            winModal.style.display = 'none';
+        }
+    }
+
+    // --- NEW: Function to handle starting a drag from the board ---
+    /**
+     * Handles starting a drag from a piece ALREADY ON THE BOARD
+     */
+    function handleBoardDragStart(e) {
+        const targetCell = e.target.closest('.board-cell');
+        
+        // Check if it's a valid, user-placed piece
+        if (!targetCell || !targetCell.dataset.instanceId || targetCell.classList.contains('start-piece')) {
+            e.preventDefault();
+            return;
+        }
+        
+        const instanceId = targetCell.dataset.instanceId;
+        
+        // 1. Remove the piece from the board
+        const { pieceId, shapeIndex } = removePieceFromBoard(instanceId);
+        
+        if (!pieceId) {
+            e.preventDefault();
+            return;
+        }
+
+        // 2. Add it back to the tray, preserving its rotation
+        const pieceEl = addPieceToTray(pieceId, shapeIndex); 
+
+        // 3. Set up the drag for this NEW tray piece
+        currentlyDraggedPiece = pieceEl; // Set global
+        e.dataTransfer.setData('text/plain', pieceId);
+        e.dataTransfer.setData('text/shape-index', shapeIndex);
+        e.dataTransfer.effectAllowed = 'move';
+        
+        // Set drag image to the piece, centered
+        e.dataTransfer.setDragImage(pieceEl, 25, 25); 
+
+        // Set dragging class immediately
+        pieceEl.classList.add('dragging');
+    }
+    
+    // --- NEW HELPER FUNCTIONS ---
+
+    /**
+     * Adds a piece to the tray with a specific rotation
+     * @param {string} pieceId - The ID of the piece
+     * @param {number} shapeIndex - The shape index to use
+     * @returns {HTMLElement} The new piece element added to the tray
+     */
+    function addPieceToTray(pieceId, shapeIndex) {
+        const piece = PIECES[pieceId];
+        if (!piece) return null;
+        
+        piece.currentShapeIndex = shapeIndex;
+        const pieceEl = createPieceElement(piece);
+        pieceTray.appendChild(pieceEl);
+        return pieceEl;
+    }
+
+    /**
+     * Removes a piece from the board based on its instanceId
+     * @param {string} instanceId - The unique ID of the piece instance
+     * @returns {{pieceId: string | null, shapeIndex: number}}
+     */
+    function removePieceFromBoard(instanceId) {
+        const allCellsOfPiece = document.querySelectorAll(`.board-cell[data-instance-id="${instanceId}"]`);
+        if (allCellsOfPiece.length === 0) return { pieceId: null, shapeIndex: -1 };
+        
+        const pieceId = allCellsOfPiece[0].dataset.pieceId;
+        const shapeIndex = parseInt(allCellsOfPiece[0].dataset.shapeIndex);
+        const piece = PIECES[pieceId];
+
+        if (!piece) return { pieceId: null, shapeIndex: -1 };
+
+        allCellsOfPiece.forEach(cell => {
+            cell.classList.remove('filled', piece.color);
+            delete cell.dataset.instanceId;
+            delete cell.dataset.pieceId;
+            delete cell.dataset.shapeIndex;
+            cell.draggable = false;
+        });
+
+        return { pieceId, shapeIndex };
+    }
+
+
     // --- Setup ---
 
     // Add drop listeners to the entire game board
@@ -371,3 +555,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize the game
     initGame();
 });
+
+
