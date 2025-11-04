@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyomino Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Puzzle Game</h1>
+        <div class="puzzle-controls">
+            <h2 id="puzzle-title">Select a Puzzle</h2>
+            <button id="reset-button">Reset Puzzle</button>
+        </div>
+    </div>
+
+    <div id="level-selector"></div>
+
+    <div id="game-container">
+        <div id="game-board">
+            </div>
+        
+        <div id="piece-tray-container">
+            <h3>Pieces to Place:</h3>
+            <div id="piece-tray">
+                </div>
+        </div>
+    </div>
+
+    <div id="win-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal-content">
+            <h2>You Solved It!</h2>
+            <p>Great job! You've completed the puzzle.</p>
+            <button id="next-puzzle-button">Next Puzzle</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script src="puzzles.js"></script> 
+    <script src="main.js"></script>
+
+</body>
+</html>

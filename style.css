@@ -1,0 +1,257 @@
+body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Arial, sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.header {
+    width: 100%;
+    max-width: 1000px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.puzzle-controls {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+#puzzle-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #1d3557;
+}
+
+#reset-button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    background-color: #e63946;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#reset-button:hover {
+    background-color: #d62828;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#level-selector {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 25px;
+    max-width: 1000px;
+}
+
+.level-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid #a8dadc;
+    background-color: #f1faee;
+    color: #1d3557;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.level-button:hover {
+    background-color: #a8dadc;
+    transform: scale(1.1);
+}
+
+.level-button.active {
+    background-color: #457b9d;
+    color: white;
+    border-color: #1d3557;
+    transform: scale(1.1);
+}
+
+#game-container {
+    display: flex;
+    flex-wrap: wrap; /* Allows tray to wrap on small screens */
+    justify-content: center;
+    gap: 30px;
+}
+
+/* Styles for the main 7x7 game board */
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(7, 50px);
+    grid-template-rows: repeat(7, 50px);
+    border: 3px solid #1d3557;
+    background-color: #fdf6e3; /* The tan color from your board */
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* A single cell on the main board */
+.board-cell {
+    width: 50px;
+    height: 50px;
+    box-shadow: inset 0 0 1px #999; /* Creates the grid line effect */
+    border-radius: 2px;
+    transition: background-color 0.1s;
+}
+
+/* Styles for the piece tray on the side */
+#piece-tray-container {
+    width: 280px;
+    border: 2px dashed #ccc;
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    align-content: flex-start; /* Aligns pieces to the top */
+    box-sizing: border-box;
+}
+
+#piece-tray-container h3 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+#piece-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* --- Piece Styles --- */
+
+/* A generic piece in the tray */
+.piece {
+    display: grid;
+    cursor: grab;
+    border-radius: 4px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.piece:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.piece:active {
+    cursor: grabbing;
+    transform: scale(1.05);
+}
+
+/* A single block of a piece */
+.piece-cell {
+    width: 25px; /* Smaller cells for the tray */
+    height: 25px;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 2px;
+}
+
+/* A piece being dragged */
+.dragging {
+    opacity: 0.5;
+    transform: scale(1.05);
+    box-shadow: none;
+}
+
+/* --- Filled / Blocked Cell Styles --- */
+
+/* A board cell that is "blocked" by the puzzle */
+.board-cell.blocked {
+    background-color: #585858;
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+    border-radius: 4px;
+}
+
+/* A board cell that is filled by any piece */
+.board-cell.filled {
+    border: 1px solid rgba(0,0,0,0.2);
+    box-sizing: border-box; /* Ensures border doesn't add to size */
+    border-radius: 2px;
+}
+
+/* --- Piece Colors (from your wooden blocks) --- */
+.color-yellow   { background-color: #FFD700; }
+.color-l-green  { background-color: #90EE90; }
+.color-purple   { background-color: #9370DB; }
+.color-d-green  { background-color: #006400; }
+.color-d-blue   { background-color: #00008B; }
+.color-orange   { background-color: #FFA500; }
+.color-red      { background-color: #DC143C; }
+.color-b-orange { background-color: #FF4500; }
+.color-pink     { background-color: #FF69B4; }
+.color-l-blue   { background-color: #87CEEB; }
+
+/* Apply colors to the 50px board cells too */
+.board-cell.color-yellow   { background-color: #FFD700; }
+.board-cell.color-l-green  { background-color: #90EE90; }
+.board-cell.color-purple   { background-color: #9370DB; }
+.board-cell.color-d-green  { background-color: #006400; }
+.board-cell.color-d-blue   { background-color: #00008B; }
+.board-cell.color-orange   { background-color: #FFA500; }
+.board-cell.color-red      { background-color: #DC143C; }
+.board-cell.color-b-orange { background-color: #FF4500; }
+.board-cell.color-pink     { background-color: #FF69B4; }
+.board-cell.color-l-blue   { background-color: #87CEEB; }
+
+/* --- Win Modal Styles --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #1d3557;
+}
+
+#next-puzzle-button {
+    padding: 12px 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    background-color: #457b9d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#next-puzzle-button:hover {
+    background-color: #1d3557;
+    transform: scale(1.05);
+}
